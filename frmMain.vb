@@ -8582,8 +8582,11 @@ ExitForm:
                             Else
                                 ' Look up the system name
                                 If rsPP.GetString(2) = JitaPerimeter Then
-                                    ' System name set below
+                                    ' System name set below - but ensure RegionID is set so blueprint/contract
+                                    ' queries (which are region-only) don't end up with an empty REGION_ID and
+                                    ' produce a malformed SQL statement.
                                     JitaPerimeterChecked = True
+                                    TempItem.RegionID = CStr(TheForgeTypeID)
                                 Else
                                     JitaPerimeterChecked = False
                                     TempItem.RegionID = CStr(rsPP.GetInt64(1))
@@ -9017,6 +9020,12 @@ ExitSub:
 
             ' If there are BPC Prices, update those here too
             For Each BPID In BPItems
+                ' Skip any blueprint with no region - contracts can only be queried by region
+                ' and an empty RegionID would produce malformed SQL ("AND REGION_ID = ").
+                If String.IsNullOrEmpty(BPID.RegionID) Then
+                    Call IncrementToolStripProgressBar(pnlProgressBar)
+                    Continue For
+                End If
                 ' Always use ESI so we need to do some calcuations depending on the type they want
                 ' Only one price, so do min/max/avg the same
                 SQL = "SELECT "
